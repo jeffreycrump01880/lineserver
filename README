@@ -1,0 +1,48 @@
+Lineserver Exercise
+Jeff Crump
+August 14, 2017
+
+** Building and Running the System **
+
+I chose to use Maven (with the Spring-Boot plugin) to build and run my application. Maven should download all of the required dependencies per pom.xml.
+
+To build and run: 
+$ ./build.sh
+$ ./run.sh
+
+When the application starts up, access the endpoint at the URL:
+
+http://localhost:8080/lines/<linenumber>
+
+The application comes with a simple (and very small) 'lines.txt' file that can be found in the distribution at src/main/resources/lines.txt.  To use different input, edit this file and re-build the project.
+
+** How does your system work? (if not addressed in comments in source)
+
+When the system starts up, the file is parsed line-by-line, and the length of each line is recorded in a hashmap, keyed by the line number.  The offset from the beginning of the file is recorded as the value for that key; by using the stored offset and the requested line number, we can compute an offset into the file by using at most two constant-time lookups.  A RandomAccessFile instance is then instantiated to read from the original disk file at the computed offset.
+
+** How will your system perform with a 1 GB file? a 10 GB file? a 100 GB file?
+
+The time required to start up the system will grow linearly with the size of the file.  But once the file is mapped, access is constant-time regardless of line number.  In terms of memory utilization, of course, larger files require larger maps, and thus more memory. This is why I chose only to map the offset and not the length of each line; that approach would at least double the memory requirement for an operation that we could, actually, just compute.
+
+** How will your system perform with 100 users? 10000 users? 1000000 users?
+
+The system will require more open file handles as the number of users increases, so this approach may not be appropriate for a very large number of concurrent users.  I chose this tradeoff (over keeping the file contents in memory) because that is even more problematic.
+
+** What documentation, websites, papers, etc did you consult in doing this assignment?
+
+None.
+
+** What third-party libraries or other tools does the system use? How did you choose each library or framework you used?
+
+I chose Spring Boot (with embedded Tomcat) because I am familiar with it -- and because it is extremely easy to spin up a basic JAX-RS server with the framework.
+
+** How long did you spend on this exercise? If you had unlimited more time to spend on this, how would you spend it and how would you prioritize each item?
+
+About 3 hours.  I would spend more time on the following items, in priority order:
+- Experiment with different approaches to indexing the file. One possibility would be to split the file into ranges, and index those ranges in parallel.  This would allow for faster "up-time".
+- Find alternatives for RandomAccessFile, to see if I can get a better solution for a large number of concurrent users.
+- More unit testing to catch edge cases.
+
+** If you were to critique your code, what would you have to say about it?
+
+It leaves some of the hard problems (index time, file handles) as work to be done, so I think it is a bit of a naive implementation for a production system.  I would also like to see some more unit tests, especially around error conditions.
